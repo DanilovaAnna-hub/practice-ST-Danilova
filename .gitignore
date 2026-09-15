@@ -1,0 +1,20 @@
+# LibreOffice / OpenOffice lock files
+.~lock.*
+*.~*
+
+# Temporary files
+*.tmp
+*~
+*.swp
+*.swo
+*.bak
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-workspace
