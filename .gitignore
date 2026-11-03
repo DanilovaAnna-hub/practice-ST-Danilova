@@ -29,3 +29,9 @@ desktop.ini
 venv/
 __pycache__/
 *.pyc
+
+# Файлы баз данных (результат работы, не исходники)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3

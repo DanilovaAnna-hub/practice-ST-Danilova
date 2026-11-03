@@ -1,13 +1,14 @@
-from pydantic import BaseModel, ConfigDict
-from typing import List
+from sqlmodel import JSON, Column, Field, SQLModel
+from typing import List, Optional
+from pydantic import ConfigDict
 
 
-class Event(BaseModel):
-    id: int
+class Event(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
     title: str
     image: str
     description: str
-    tags: List[str]
+    tags: List[str] = Field(default_factory=list, sa_column=Column(JSON))
     location: str
 
     model_config = ConfigDict(
@@ -15,9 +16,26 @@ class Event(BaseModel):
             "example": {
                 "title": "FastAPI Book Launch",
                 "image": "https://linktomyimage.com/image.png",
-                "description": "Мы обсудим содержание книги по FastAPI на этом мероприятии.",
+                "description": "Обсудим содержание книги по FastAPI.",
                 "tags": ["python", "fastapi", "book", "launch"],
-                "location": "Google Meet"
+                "location": "Google Meet",
+            }
+        }
+    )
+
+
+class EventUpdate(SQLModel):
+    title: Optional[str] = None
+    image: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+    location: Optional[str] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "title": "FastAPI Book Launch II",
+                "location": "Hybrid",
             }
         }
     )

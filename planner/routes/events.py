@@ -1,55 +1,74 @@
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import delete, select
 from typing import List
-from models.events import Event
 
-event_router = APIRouter(
-    tags=["Events"]
-)
+from database.connection import get_session
+from models.events import Event, EventUpdate
 
-events = []
+event_router = APIRouter(tags=["Events"])
 
 
 @event_router.get("/", response_model=List[Event])
-async def retrieve_all_events() -> List[Event]:
-    return events
+async def retrieve_all_events(session=Depends(get_session)) -> List[Event]:
+    return session.exec(select(Event)).all()
 
 
 @event_router.get("/{id}", response_model=Event)
-async def retrieve_event(id: int) -> Event:
-    for event in events:
-        if event.id == id:
-            return event
+async def retrieve_event(id: int, session=Depends(get_session)) -> Event:
+    event = session.get(Event, id)
+    if event:
+        return event
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail="Событие с указанным ID не существует"
+        detail="Событие с указанным ID не существует",
     )
 
 
 @event_router.post("/new")
-async def create_event(body: Event = Body(...)) -> dict:
-    events.append(body)
+async def create_event(new_event: Event, session=Depends(get_session)) -> dict:
+    session.add(new_event)
+    session.commit()
+    session.refresh(new_event)
     return {
-        "message": "Событие успешно создано"
+        "message": "Событие успешно создано",
+        "id": new_event.id,
     }
 
 
-@event_router.delete("/{id}")
-async def delete_event(id: int) -> dict:
-    for event in events:
-        if event.id == id:
-            events.remove(event)
-            return {
-                "message": "Событие успешно удалено"
-            }
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Событие с указанным ID не существует"
-    )
+@event_router.put("/edit/{id}", response_model=Event)
+async def update_event(
+    id: int, new_data: EventUpdate, session=Depends(get_session)
+) -> Event:
+    event = session.get(Event, id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Событие с указанным ID не существует",
+        )
+    event_data = new_data.model_dump(exclude_unset=True)
+    for key, value in event_data.items():
+        setattr(event, key, value)
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return event
+
+
+@event_router.delete("/delete/{id}")
+async def delete_event(id: int, session=Depends(get_session)) -> dict:
+    event = session.get(Event, id)
+    if not event:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Событие с указанным ID не существует",
+        )
+    session.delete(event)
+    session.commit()
+    return {"message": "Событие успешно удалено"}
 
 
 @event_router.delete("/")
-async def delete_all_events() -> dict:
-    events.clear()
-    return {
-        "message": "Все события удалены"
-    }
+async def delete_all_events(session=Depends(get_session)) -> dict:
+    session.exec(delete(Event))
+    session.commit()
+    return {"message": "Все события удалены"}
